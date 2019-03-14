@@ -8,6 +8,7 @@ class Priority(IntEnum):
     MUST = auto()
     SHOULD = auto()
     COULD = auto()
+    UNIMPORTANT = auto()
 
     @classmethod
     def default(cls):
@@ -48,21 +49,22 @@ class Idea(object):
     def __init__(self, text, longtext=None, priority=Priority.default(), tags=Tag.default()):
         self.text = text
         self.longtext = longtext
+
         if isinstance(priority, int):
             priority = Priority(priority)
         if not isinstance(priority, Priority):
-            raise ValueError("Illegal Argument for priority.")
+            raise ValueError("Illegal Argument for 'priority'.")
         self.priority = priority
+
+        if isinstance(tags, int):
+            tags = Tag(tags)
+        if not isinstance(tags, Tag):
+            raise ValueError("Illegal Argument for 'tags'.")
         self.tags = tags
 
     @classmethod
     def from_prompt(cls):
         pass
-        #text = input("Please enter idea text: \t")
-        #longtext =
-        #priority =
-        #tags =
-        #return Idea(text)
 
     @classmethod
     def mock(cls, text=None, longtext=None, priority=None, tags=None):
@@ -108,8 +110,7 @@ class Idea(object):
 
 
 if __name__ == '__main__':
-    num_ideas = 1
+    num_ideas = 50
     for _ in range(num_ideas):
         i = Idea.mock()
         i.change_priority()
-        print(i)

@@ -23,7 +23,7 @@ class Nemo(object):
     def REPL(cls):
         run = True
         repl_nemo = cls()
-        print("Welcome to Nemo interactive shell")
+        print("Welcome to Nemo's interactive shell")
         while run:
             cmd = input(cls.repl_prompt)
             if not cmd[0] == '!':

@@ -1,29 +1,38 @@
-from enum import IntEnum, IntFlag
+from enum import IntEnum, IntFlag, auto
 
 
 class Priority(IntEnum):
-    MUST = 1
-    SHOULD = 2
-    COULD = 3
+    '''
+    Nemo's idea have different priorities. Because nemo got so much of them, most of them have a low priority.
+    '''
+    MUST = auto()
+    SHOULD = auto()
+    COULD = auto()
 
     @classmethod
     def default(cls):
         return cls.COULD
 
     def __str__(self):
-        return "__str__"
+        return self.__repr__()
 
     def __repr__(self):
         return self.name
 
 
 class Tag(IntFlag):
-    COOL = 1
-    STUPID = 2
+    '''
+    Nemo's ideas have lots of attributes. Most of them are stupid but also kinda cool.
+    Some are reasonable, and later there will be more.
+    Also, they can be more than one of that.
+    '''
+    COOL = auto()
+    STUPID = auto()
+    REASONABLE = auto()
 
     @classmethod
     def default(cls):
-        return cls.COOL & cls.STUPID
+        return cls.COOL | cls.STUPID
 
 
 class Idea(object):
@@ -39,23 +48,68 @@ class Idea(object):
     def __init__(self, text, longtext=None, priority=Priority.default(), tags=Tag.default()):
         self.text = text
         self.longtext = longtext
+        if isinstance(priority, int):
+            priority = Priority(priority)
+        if not isinstance(priority, Priority):
+            raise ValueError("Illegal Argument for priority.")
         self.priority = priority
         self.tags = tags
 
+    @classmethod
+    def from_prompt(cls):
+        pass
+        #text = input("Please enter idea text: \t")
+        #longtext =
+        #priority =
+        #tags =
+        #return Idea(text)
+
+    @classmethod
+    def mock(cls, text=None, longtext=None, priority=None, tags=None):
+        import random
+        if text is None:
+            text = "Mocked Idea"
+        if longtext is None:
+            longtext = "This is some text with a randomly generated priority"
+        if priority is None:
+            priority = Priority(random.randint(1, len(Priority)))
+        if tags is None:
+            tags = Tag(random.randint(1, 2 ** len(Tag) - 1))
+        return cls(text=text, longtext=longtext, priority=priority, tags=tags)
+
     def __str__(self):
-        return "__str__"
+        return self.__repr__()
 
     def __repr__(self):
-        return "|{}|: {}".format(str(self.priority), self.text, self.longtext)
+        return "|{}|: {} - {} - {}".format(str(self.priority), self.text, self.longtext, str(self.tags))
 
     ''' Change priority. If not stated otherwise, promote to one priority higher. '''
-    def change_prio(self, new_prio=None, promote=True):
+    def change_priority(self, new_prio=None, promote=True):
         if isinstance(new_prio, Priority):
             self.priority = new_prio
-            return
-        if promote:
-            # check if priority is already highest (numerically smallest)
-            self.priority = Priority(self.priority.value - 1)
+        elif isinstance(new_prio, int):
+            self.priority = Priority(new_prio)
+        elif new_prio is None:
+            try:
+                if promote:
+                    # check if priority is already highest (numerically smallest)
+                    self.priority = Priority(self.priority.value - 1)
+                else:
+                    # check if priority is already lowest (numerically highest)
+                    self.priority = Priority(self.priority.value + 1)
+            except ValueError:
+                if promote:
+                    error_hint = "highest"
+                else:
+                    error_hint = "lowest"
+                print("Already at {} priority.".format(error_hint))
         else:
-            # check if priority is already lowest (numerically highest)
-            self.priority = Priority(self.priority.value + 1)
+            raise TypeError("Illegal argument {} for change_priority.".format(new_prio))
+
+
+if __name__ == '__main__':
+    num_ideas = 1
+    for _ in range(num_ideas):
+        i = Idea.mock()
+        i.change_priority()
+        print(i)

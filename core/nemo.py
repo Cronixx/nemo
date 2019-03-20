@@ -1,5 +1,10 @@
 from core.idea import Idea, Priority, Tag
 from uuid import uuid4
+import logging
+from util.log import configure_logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class Nemo(object):
@@ -20,7 +25,7 @@ class Nemo(object):
     '''
     major_version = 0
     minor_version = 1
-    build_version = 15
+    build_version = 18
     version_str = "Nemo v{}.{}.{}".format(major_version, minor_version, build_version)
     repl_prompt = ">> "
     default_data_dir = "../data/nemo"
@@ -39,7 +44,9 @@ class Nemo(object):
         import pickle, os
         if not os.path.exists(data_dir):
             raise FileNotFoundError("No data directory.")
-        with open(os.path.join(data_dir, filename), mode="rb") as file:
+        fp = os.path.join(data_dir, filename)
+        with open(fp, mode="rb") as file:
+            logger.info("Creating {} from file: {}".format(cls.__name__, fp))
             return pickle.load(file)
 
     @classmethod
@@ -55,35 +62,71 @@ class Nemo(object):
         return nemo
 
     def __init__(self, *args, **kwargs):
-        print(Nemo.version_str)
+        logger.info(self)
         self.uid = uuid4()
         self.ideas = [arg for arg in args if isinstance(arg, Idea)]
+        logger.info("Created Nemo with uid={} and ideas={}".format(self.uid, self.ideas))
 
     def __call__(self, *args, **kwargs):
+        logger.debug("In __call__, with args={} and kwargs={}".format(args, kwargs))
         print("WHAT DID YOU CALL ME?")
 
     def __enter__(self):
-        print("entered")
+        logger.debug("In __enter__")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        print("exited")
+        logger.debug("In __exit__")
 
-    def __getattr__(self, item, debug=False):
+    def __del__(self):
+        pass
+
+    def __getattr__(self, item):
+        logger.debug("In __getattr__, accessing {}".format(item))
         try:
             return self.__dict__[item]
         except KeyError:
-            print("Trying to access '{}'.".format(item))
-            return "lol"
-    __getitem__ = __getattr__
+            logger.warning("Trying to access '{}' in __getattr__.".format(item))
+            return "lol, no attr with that name"
+
+    def __setattr__(self, key, value):
+        logger.debug("In __setattr__, setting '{}' to '{}'".format(key, value))
+        try:
+            if value is None:
+                del self.__dict__[key]
+            else:
+                self.__dict__[key] = value
+        except KeyError:
+            logger.warning("Failure while trying to set '{}' to value '{}' in __setattr__.".format(key, value))
+
+    def __getitem__(self, item):
+        logger.debug("In __getitem__, accessing {}".format(item))
+        try:
+            return self.__dict__[item]
+        except KeyError:
+            logger.warning("Failure while trying to access '{}' in __getitem__.".format(item))
+            return "lol, no item with that name"
+
+    def __setitem__(self, key, value):
+        logger.debug("In __setitem__, setting '{}' to '{}'".format(key, value))
+        try:
+            if value is None:
+                del self.__dict__[key]
+            else:
+                self.__dict__[key] = value
+        except KeyError:
+            logger.warning("Failure while trying to set '{}' to value '{}' in __setitem__.".format(key, value))
 
     def __getstate__(self):
+        logger.debug("In __getstate__")
         return self.__dict__
 
     def __setstate__(self, state):
+        logger.debug("In __setstate__, with state: {}".format(state))
         self.__dict__ = state
 
     def __str__(self):
+        logger.debug("In __str__")
         return self.version_str
 
     def add_idea(self, idea):
@@ -92,10 +135,10 @@ class Nemo(object):
         elif isinstance(idea, list):
             self.ideas.extend(idea)
         else:
-            raise NotImplementedError("Adding unknown element to ideas.")
+            raise NotImplementedError("Trying to add unknown element to ideas.")
 
     def eval(self, cmd):
-        return self[cmd]()
+        raise NotImplementedError
 
     def nope(self):
         return None
@@ -107,27 +150,40 @@ class Nemo(object):
     def pickle_to(self, filename, data_dir=default_data_dir):
         import pickle, os
         if not os.path.exists(data_dir):
+            logger.warning("Directory {} doesn't exist. Trying to create it.".format(data_dir))
             os.makedirs(data_dir)
         with open(os.path.join(data_dir, filename), mode="wb") as file:
+            logger.debug("Pickling to file: {}".format(os.path.join(data_dir, filename)))
             pickle.dump(self, file)
 
     def pickle(self):
         import pickle
+        logger.debug("Pickling to object")
         return pickle.dumps(self)
 
     def idea_by_uid(self, uid):
+        logger.debug("Requesting idea by uid: {}".format(uid))
         for idea in self.ideas:
             if idea.uid == uid:
                 return idea
+        logger.warning("No idea with uid: {} found.".format(uid))
         return None
 
     def ideas_by_priority(self, priority=Priority.MUST):
+        logger.debug("Requesting ideas by priority: {}".format(str(priority)))
         return [idea for idea in self.ideas if idea.priority == priority]
 
     def ideas_by_tag(self, tag=Tag.REASONABLE):
+        logger.debug("Requesting ideas by tag: {}".format(str(tag)))
         return [idea for idea in self.ideas if tag in idea.tags]
 
 
-if __name__ == '__main__':
-    n = Nemo()
+def print_sep(sep='=', num=80):
+    print(sep*num)
 
+
+if __name__ == '__main__':
+    configure_logging()
+    logger.info("Initialized logger {}".format(logger))
+    n = Nemo()
+    print(dir(n))

@@ -1,5 +1,10 @@
 from enum import IntEnum, IntFlag, auto
 from uuid import uuid4
+import logging
+from util.log import configure_logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class UpdateableIntEnum(IntEnum):
@@ -103,15 +108,17 @@ class Idea(object):
     @classmethod
     def from_prompt(cls):
         text = input("Enter text {}".format(Idea.idea_prompt))
-        priority = int(input("Enter priority (1=highest, {}=lowest) {}".format(len(Priority), Idea.idea_prompt)))
-        return Idea(text, priority=priority, tags=Tag.REASONABLE)
+        p = Priority(int(input("Enter priority (1=highest, {}=lowest) {}".format(len(Priority), Idea.idea_prompt))))
+        return cls(text, priority=p, tags=Tag.REASONABLE)
 
     @classmethod
     def from_file(cls, filename, data_dir=default_data_dir):
         import pickle, os
         if not os.path.exists(data_dir):
             raise FileNotFoundError("No data directory.")
-        with open(os.path.join(data_dir, filename), mode="rb") as file:
+        fp = os.path.join(data_dir, filename)
+        with open(fp, mode="rb") as file:
+            logger.info("Creating {} from file: {}".format(cls.__name__, fp))
             return pickle.load(file)
 
     @classmethod
@@ -122,14 +129,10 @@ class Idea(object):
     @classmethod
     def mock(cls, text=None, longtext=None, priority=None, tags=None):
         import random
-        if text is None:
-            text = "Mocked Idea"
-        if longtext is None:
-            longtext = "This is some text with a randomly generated priority"
-        if priority is None:
-            priority = Priority(random.randint(1, len(Priority)))
-        if tags is None:
-            tags = Tag(random.randint(1, 2 ** len(Tag) - 1))
+        text = text or "Mocked Idea"
+        longtext = longtext or "This is some text with a randomly generated priority"
+        priority = priority or Priority(random.randint(1, len(Priority)))
+        tags = tags or Tag(random.randint(1, 2 ** len(Tag) - 1))
         return cls(text=text, longtext=longtext, priority=priority, tags=tags)
 
     def __str__(self):
@@ -143,45 +146,49 @@ class Idea(object):
         if isinstance(new_prio, Priority):
             self.priority = new_prio
         elif isinstance(new_prio, int):
-            if not new_prio >= 1 and new_prio <= len(Priority):
-                print("Illegal Value for priority.")
-            else:
+            if 1 <= new_prio <= len(Priority):
                 self.priority = Priority(new_prio)
+            else:
+                logger.warning("Illegal argument for change_priority of idea '{}...'".format(str(self.uid)[:8]))
         elif new_prio is None:
             if promote:
                 self.promote()
             else:
                 self.demote()
         else:
-            raise TypeError("Illegal argument {} for change_priority.".format(new_prio))
+            raise TypeError("Illegal argument {} for change_priority for idea '{}...'.".format(new_prio, str(self.uid)[:8]))
 
     '''Change priority to one higher (numerically lower). '''
     def promote(self):
         if self.priority == 1:
-            print("Already at max. priority.")
+            logger.warning("Failure while trying to promote idea '{}...', already at highest priority.".format(str(self.uid)[:8]))
         else:
             self.priority = Priority(self.priority.value - 1)
 
     '''Change priority to one lower (numerically higher). '''
     def demote(self):
         if self.priority == len(Priority):
-            print("Already at lowest Priority.")
+            logger.warning("Failure while trying to demote idea '{}...', already at lowest priority.".format(str(self.uid)[:8]))
         else:
             self.priority = Priority(self.priority.value + 1)
 
     def pickle(self):
         import pickle
+        logger.debug("Pickling idea '{}...' to object".format(str(self.uid)[:8]))
         return pickle.dumps(self)
 
     ''' Serializes object to file '''
     def pickle_to(self, filename, data_dir=default_data_dir):
         import pickle, os
         if not os.path.exists(data_dir):
+            logger.warning("Directory {} doesn't exist. Trying to create it.".format(data_dir))
             os.makedirs(data_dir)
         with open(os.path.join(data_dir, filename), mode="wb") as file:
+            logger.debug("Pickling to idea '{}...' file: {}".format(str(self.uid)[:8], os.path.join(data_dir, filename)))
             pickle.dump(self, file)
 
 
 if __name__ == '__main__':
-    print(len(Tag))
+    configure_logging()
+    i = Idea.mock().change_priority(8)
 

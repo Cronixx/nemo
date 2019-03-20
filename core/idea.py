@@ -1,9 +1,17 @@
 from enum import IntEnum, IntFlag, auto
+from uuid import uuid4
+
+
+class UpdateableIntEnum(IntEnum):
+    pass
 
 
 class Priority(IntEnum):
     '''
     Nemo's idea have different priorities. Because nemo got so much of them, most of them have a low priority.
+
+    TODO: Overwrite to automatically adjust parameter to lowest/highest value.
+
     '''
     MUST = auto()
     SHOULD = auto()
@@ -21,11 +29,18 @@ class Priority(IntEnum):
         return self.name
 
 
+class UpdateableIntFlag(IntFlag):
+    pass
+
+
 class Tag(IntFlag):
     '''
     Nemo's ideas have lots of attributes. Most of them are stupid but also kinda cool.
     Some are reasonable, and later there will be more.
     Also, they can be more than one of that.
+
+    Add Tags in runtime
+
     '''
     COOL = auto()
     STUPID = auto()
@@ -45,10 +60,29 @@ class Idea(object):
     as ideas with the lowest (numerically highest) priority.
 
     Ideas can also have tags. Per default, all ideas are cool and stupid.
+
+    It should be possible, to create ideas from the to-be-implemented runtime shell.
+
+    Nested ideas could be a thing. Or connection of ideas, which also are ideas.
+    Bi-directional? Uni-directional? NETWORKX?
+
+    Editable Tags
+
+    Aufwand
     '''
-    def __init__(self, text, longtext=None, priority=Priority.default(), tags=Tag.default()):
+    idea_prompt = ": "
+    default_data_dir = "../data/ideas"
+
+    def __init__(self, text, longtext=None, connected_ideas=None,
+                 priority=Priority.default(), tags=Tag.default(),
+                 url=None):
+        self.uid = uuid4()
         self.text = text
         self.longtext = longtext
+
+        if connected_ideas is not None:
+            raise NotImplementedError("Implement 'connected ideas'.")
+        self.connected_ideas = connected_ideas
 
         if isinstance(priority, int):
             priority = Priority(priority)
@@ -62,9 +96,28 @@ class Idea(object):
             raise ValueError("Illegal Argument for 'tags'.")
         self.tags = tags
 
+        if url is not None:
+            raise NotImplementedError("Ideas can have urls!")
+        self.url = url
+
     @classmethod
     def from_prompt(cls):
-        pass
+        text = input("Enter text {}".format(Idea.idea_prompt))
+        priority = int(input("Enter priority (1=highest, {}=lowest) {}".format(len(Priority), Idea.idea_prompt)))
+        return Idea(text, priority=priority, tags=Tag.REASONABLE)
+
+    @classmethod
+    def from_file(cls, filename, data_dir=default_data_dir):
+        import pickle, os
+        if not os.path.exists(data_dir):
+            raise FileNotFoundError("No data directory.")
+        with open(os.path.join(data_dir, filename), mode="rb") as file:
+            return pickle.load(file)
+
+    @classmethod
+    def from_pickle(cls, b):
+        import pickle
+        return pickle.loads(b)
 
     @classmethod
     def mock(cls, text=None, longtext=None, priority=None, tags=None):
@@ -90,27 +143,45 @@ class Idea(object):
         if isinstance(new_prio, Priority):
             self.priority = new_prio
         elif isinstance(new_prio, int):
-            self.priority = Priority(new_prio)
+            if not new_prio >= 1 and new_prio <= len(Priority):
+                print("Illegal Value for priority.")
+            else:
+                self.priority = Priority(new_prio)
         elif new_prio is None:
-            try:
-                if promote:
-                    # check if priority is already highest (numerically smallest)
-                    self.priority = Priority(self.priority.value - 1)
-                else:
-                    # check if priority is already lowest (numerically highest)
-                    self.priority = Priority(self.priority.value + 1)
-            except ValueError:
-                if promote:
-                    error_hint = "highest"
-                else:
-                    error_hint = "lowest"
-                print("Already at {} priority.".format(error_hint))
+            if promote:
+                self.promote()
+            else:
+                self.demote()
         else:
             raise TypeError("Illegal argument {} for change_priority.".format(new_prio))
 
+    '''Change priority to one higher (numerically lower). '''
+    def promote(self):
+        if self.priority == 1:
+            print("Already at max. priority.")
+        else:
+            self.priority = Priority(self.priority.value - 1)
+
+    '''Change priority to one lower (numerically higher). '''
+    def demote(self):
+        if self.priority == len(Priority):
+            print("Already at lowest Priority.")
+        else:
+            self.priority = Priority(self.priority.value + 1)
+
+    def pickle(self):
+        import pickle
+        return pickle.dumps(self)
+
+    ''' Serializes object to file '''
+    def pickle_to(self, filename, data_dir=default_data_dir):
+        import pickle, os
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+        with open(os.path.join(data_dir, filename), mode="wb") as file:
+            pickle.dump(self, file)
+
 
 if __name__ == '__main__':
-    num_ideas = 50
-    for _ in range(num_ideas):
-        i = Idea.mock()
-        i.change_priority()
+    print(len(Tag))
+

@@ -1,5 +1,6 @@
 import logging
-
+import pickle
+import os
 
 logger = logging.getLogger(__name__)
 default_data_dir = "../data"
@@ -10,7 +11,6 @@ def print_sep(sep='=', num=80):
 
 
 def pickle_to(obj, filename, data_dir=default_data_dir):
-    import pickle, os
     if not os.path.exists(data_dir):
         logger.warning("Directory {} doesn't exist. Trying to create it.".format(data_dir))
         os.makedirs(data_dir)
@@ -20,7 +20,6 @@ def pickle_to(obj, filename, data_dir=default_data_dir):
 
 
 def from_file(cls, filename, data_dir=default_data_dir):
-    import pickle, os
     if not os.path.exists(data_dir):
         raise FileNotFoundError("No data directory.")
     fp = os.path.join(data_dir, filename)

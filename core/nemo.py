@@ -62,6 +62,7 @@ class Nemo(object):
         self.ideas = []
         for arg in args:
             self.add_idea(arg)
+        self._unserialized = []
         logger.info("Created Nemo with uid={} and ideas={}".format(self.uid, self.ideas))
 
     def __call__(self, *args, **kwargs):
@@ -116,6 +117,7 @@ class Nemo(object):
 
     def __getstate__(self):
         logger.debug("In __getstate__")
+        self._unserialized = None
         return self.__dict__
 
     def __setstate__(self, state):
@@ -145,7 +147,7 @@ class Nemo(object):
         for key in self.__dict__:
             print("{}: {}".format(key, self[key]))
 
-    def pickle_to(self, filename, data_dir=default_data_dir):
+    def to_file(self, filename, data_dir=default_data_dir):
         pickle_to(self, filename, data_dir)
 
     def pickle(self):
@@ -171,7 +173,6 @@ class Nemo(object):
 
 
 if __name__ == '__main__':
-    configure_logging()
+    configure_logging(threshold=logging.INFO)
     logger.info("Initialized logger {}".format(logger))
-    n = Nemo.from_file("refactored.pickle")
-    n.puke()
+    n = Nemo.from_file("unserialized.pickle")

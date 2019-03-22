@@ -64,7 +64,9 @@ class Nemo(object):
     def __init__(self, *args, **kwargs):
         logger.info(self)
         self.uid = uuid4()
-        self.ideas = [arg for arg in args if isinstance(arg, Idea)]
+        self.ideas = []
+        for arg in args:
+            self.add_idea(arg)
         logger.info("Created Nemo with uid={} and ideas={}".format(self.uid, self.ideas))
 
     def __call__(self, *args, **kwargs):
@@ -129,13 +131,14 @@ class Nemo(object):
         logger.debug("In __str__")
         return self.version_str
 
-    def add_idea(self, idea):
-        if isinstance(idea, Idea):
-            self.ideas.append(idea)
-        elif isinstance(idea, list):
-            self.ideas.extend(idea)
+    def add_idea(self, val):
+        if isinstance(val, Idea):
+            self.ideas.append(val)
+        elif isinstance(val, list):
+            for elem in val:
+                self.add_idea(elem)
         else:
-            raise NotImplementedError("Trying to add unknown element to ideas.")
+            logger.info("Skipping invalid element while adding ideas.")
 
     def eval(self, cmd):
         raise NotImplementedError
@@ -163,19 +166,19 @@ class Nemo(object):
 
     def idea_by_uid(self, uid):
         logger.debug("Requesting idea by uid: {}".format(uid))
-        for idea in self.ideas:
-            if idea.uid == uid:
-                return idea
+        for val in self.ideas:
+            if val.uid == uid:
+                return val
         logger.warning("No idea with uid: {} found.".format(uid))
         return None
 
     def ideas_by_priority(self, priority=Priority.MUST):
         logger.debug("Requesting ideas by priority: {}".format(str(priority)))
-        return [idea for idea in self.ideas if idea.priority == priority]
+        return [val for val in self.ideas if val.priority == priority]
 
     def ideas_by_tag(self, tag=Tag.REASONABLE):
         logger.debug("Requesting ideas by tag: {}".format(str(tag)))
-        return [idea for idea in self.ideas if tag in idea.tags]
+        return [val for val in self.ideas if tag in val.tags]
 
 
 def print_sep(sep='=', num=80):
@@ -185,5 +188,6 @@ def print_sep(sep='=', num=80):
 if __name__ == '__main__':
     configure_logging()
     logger.info("Initialized logger {}".format(logger))
-    n = Nemo()
-    print(dir(n))
+    n = Nemo.mock(num_ideas=50)
+    for idea in n.ideas_by_priority(Priority.MUST):
+        print(idea.uid)

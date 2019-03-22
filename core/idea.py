@@ -81,6 +81,7 @@ class Idea(object):
     def __init__(self, text, longtext=None, connected_ideas=None,
                  priority=Priority.default(), tags=Tag.default(),
                  url=None):
+        
         self.uid = uuid4()
         self.text = text
         self.longtext = longtext

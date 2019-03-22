@@ -2,6 +2,7 @@ from core.idea import Idea, Priority, Tag
 from uuid import uuid4
 import logging
 from util.log import configure_logging
+from util.helpers import pickle_to, from_file
 
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ class Nemo(object):
     '''
     major_version = 0
     minor_version = 1
-    build_version = 18
+    build_version = 19
     version_str = "Nemo v{}.{}.{}".format(major_version, minor_version, build_version)
     repl_prompt = ">> "
     default_data_dir = "../data/nemo"
@@ -41,13 +42,7 @@ class Nemo(object):
 
     @classmethod
     def from_file(cls, filename, data_dir=default_data_dir):
-        import pickle, os
-        if not os.path.exists(data_dir):
-            raise FileNotFoundError("No data directory.")
-        fp = os.path.join(data_dir, filename)
-        with open(fp, mode="rb") as file:
-            logger.info("Creating {} from file: {}".format(cls.__name__, fp))
-            return pickle.load(file)
+        return from_file(cls, filename, data_dir)
 
     @classmethod
     def from_pickle(cls, b):
@@ -151,13 +146,7 @@ class Nemo(object):
             print("{}: {}".format(key, self[key]))
 
     def pickle_to(self, filename, data_dir=default_data_dir):
-        import pickle, os
-        if not os.path.exists(data_dir):
-            logger.warning("Directory {} doesn't exist. Trying to create it.".format(data_dir))
-            os.makedirs(data_dir)
-        with open(os.path.join(data_dir, filename), mode="wb") as file:
-            logger.debug("Pickling to file: {}".format(os.path.join(data_dir, filename)))
-            pickle.dump(self, file)
+        pickle_to(self, filename, data_dir)
 
     def pickle(self):
         import pickle
@@ -181,13 +170,8 @@ class Nemo(object):
         return [val for val in self.ideas if tag in val.tags]
 
 
-def print_sep(sep='=', num=80):
-    print(sep*num)
-
-
 if __name__ == '__main__':
     configure_logging()
     logger.info("Initialized logger {}".format(logger))
-    n = Nemo.mock(num_ideas=50)
-    for idea in n.ideas_by_priority(Priority.MUST):
-        print(idea.uid)
+    n = Nemo.from_file("refactored.pickle")
+    n.puke()
